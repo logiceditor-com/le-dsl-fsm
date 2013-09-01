@@ -1,0 +1,119 @@
+#! /bin/bash
+
+LUA="luajit2"
+if [ -z "$(which ${LUA})" ]; then
+  LUA="lua"
+
+  if [ -z "$(which ${LUA})" ]; then
+    echo "Error: luajit2 and lua executables not found" >&2
+    exit 1
+  fi
+fi
+
+ROOT="${BASH_SOURCE[0]}";
+if([ -h "${ROOT}" ]) then
+  while([ -h "${ROOT}" ]) do ROOT=`readlink "${ROOT}"`; done
+fi
+ROOT=$(cd `dirname "${ROOT}"` && pwd)
+
+${LUA} - "${ROOT}" $@ <<EOF
+--------------------------------------------------------------------------------
+
+local ROOT = select(1, ...)
+
+--------------------------------------------------------------------------------
+
+pcall(require, 'luarocks.require') -- Ignoring errors
+
+--------------------------------------------------------------------------------
+
+require 'lua-nucleo.module'
+require 'lua-nucleo.strict'
+require 'lua-aplicado.module'
+
+require = import 'lua-nucleo/require_and_declare.lua' { 'require_and_declare' }
+
+require 'lfs'
+
+--------------------------------------------------------------------------------
+
+import 'pk-core/common_logging.lua' { 'create_common_stdout_logging' } ()
+
+--------------------------------------------------------------------------------
+
+local fill_curly_placeholders,
+      make_concatter
+      = import 'lua-nucleo/string.lua'
+      {
+        'fill_curly_placeholders',
+        'make_concatter'
+      }
+
+local find_all_files,
+      read_file,
+      write_file
+      = import 'lua-aplicado/filesystem.lua'
+      {
+        'find_all_files',
+        'read_file',
+        'write_file'
+      }
+
+--------------------------------------------------------------------------------
+
+local Q = function(s) return ("%q"):format(s) end
+
+--------------------------------------------------------------------------------
+
+local TARGETS =
+{
+  { name = "scm", version = 1, branch = "master" };
+}
+
+local MODULES
+do
+  local filenames = find_all_files(ROOT .. "/../src/lua/dsl-fsm", ".*%.lua$")
+  table.sort(filenames)
+
+  local cat, concat = make_concatter()
+
+  for i = 1, #filenames do
+    local name = assert(
+        filenames[i]:match(".*/src/lua/(dsl%-fsm/.*)$"), "bad path"
+      )
+    cat [[
+    []] (Q(name:gsub("%.lua$", ""):gsub("/", "."))) [[] = ]] (
+        Q("src/lua/" .. name)
+      ) [[;
+]]
+  end
+
+  MODULES = concat()
+end
+
+local TEMPLATE = assert(read_file(ROOT .. "/../rockspec/rockspec.template"))
+
+--------------------------------------------------------------------------------
+
+-- TODO: Update version automatically if file is changed (see update_file())
+for i = 1, #TARGETS do
+  local TARGET = TARGETS[i]
+
+  assert(
+      write_file(
+          ROOT .. "/../rockspec/le-dsl-fsm-"
+       .. TARGET.name .. "-" .. TARGET.version
+       .. ".rockspec",
+          fill_curly_placeholders(
+              TEMPLATE,
+              {
+                VERSION = TARGET.name .. "-" .. TARGET.version;
+                BRANCH = TARGET.branch;
+                MODULES = MODULES;
+              }
+            )
+        )
+    )
+end
+
+EOF

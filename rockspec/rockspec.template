@@ -1,0 +1,27 @@
+package = "le-dsl-fsm"
+version = "${VERSION}"
+source =
+{
+  url = "git://github.com/logiceditor-com/le-dsl-fsm.git";
+  branch = ${BRANCH};
+}
+description =
+{
+  summary = "The Lua DSL FSM library";
+  homepage = "https://github.com/logiceditor-com/le-dsl-fsm";
+  license = "MIT/X11";
+  maintainer = "LogicEditor Team <team@logiceditor.com>";
+}
+dependencies =
+{
+  "lua >= 5.1";
+  "lua-nucleo";
+  "lua-aplicado";
+}
+build =
+{
+  type = "builtin";
+  modules =
+  {
+${MODULES}  };
+}
