@@ -48,12 +48,6 @@ local is_string,
         'is_table'
       }
 
-local do_in_environment
-      = import 'lua-nucleo/sandbox.lua'
-      {
-        'do_in_environment'
-      }
-
 local tstr
       = import 'lua-nucleo/tstr.lua'
       {
