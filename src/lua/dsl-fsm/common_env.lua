@@ -49,10 +49,12 @@ local do_in_environment
         'do_in_environment'
       }
 
-local tclone,
+local empty_table,
+      tclone,
       tijoin_many
       = import 'lua-nucleo/table-utils.lua'
       {
+        'empty_table',
         'tclone',
         'tijoin_many'
       }
@@ -423,12 +425,21 @@ do
     __mode = "k";
   }
 
-  create_dsl_env_mt = function(allowed_namespaces_set)
+  create_dsl_env_mt = function(allowed_namespaces_set, extra_context)
+    extra_context = extra_context or empty_table
+
     arguments(
-        "table", allowed_namespaces_set
+        "table", allowed_namespaces_set,
+        "table", extra_context
       )
 
     local checker = make_checker()
+
+    local context =
+    {
+      dsl_env_targets = setmetatable({ }, dsl_env_targets_mt);
+      dsl_env = nil; -- Set below.
+    }
 
     local self =
     {
@@ -449,14 +460,18 @@ do
       meta_dsl_manager_ = assert(
           make_dsl_manager(tclone(meta_dsl_fsm), checker)
         );
-      context_ =
-      {
-        dsl_env_targets = setmetatable({ }, dsl_env_targets_mt);
-        dsl_env = nil; -- Set below.
-      };
+      context_ = context;
     }
 
-    self.context_.dsl_env = self -- ?! Ugly.
+    context.dsl_env = self -- ?! Ugly.
+
+    for k, v in pairs(extra_context) do
+      if context[k] ~= nil then
+        -- TODO: Hide "system" context keys.
+        error("can't override system context key `" .. tostring(k) .. "'", 2)
+      end
+      context[k] = v
+    end
 
     return self
   end

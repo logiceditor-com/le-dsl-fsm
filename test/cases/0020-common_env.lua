@@ -94,7 +94,7 @@ local test = (...)("dsl-fsm-common-env")
 
 --------------------------------------------------------------------------------
 
-test "common-env-contexts" (function()
+test "common-env-contexts-shared" (function()
   local contexts = { }
 
   local init = function(proxy)
@@ -137,6 +137,75 @@ test "common-env-contexts" (function()
   for i = 2, #contexts do
     ensure_equals(i .. ": context should be the same", contexts[i], c)
   end
+end)
+
+--------------------------------------------------------------------------------
+
+test "common-env-extra-context" (function()
+  local tag = { called = false }
+
+  local init = function(proxy)
+    (-proxy)._add_states
+    {
+      {
+        type = "call"; id = "()";
+        from_init = true;
+
+        false;
+
+        handler = function(self, t)
+          ensure_equals(
+              "extra context visible",
+              self:context().tag,
+              tag
+            )
+          self:context().tag.called = true
+          self:context().not_shared = true
+        end;
+      };
+    }
+  end
+
+  local extra_context = { tag = tag }
+
+  ensure(
+      "run dsl",
+      do_in_common_dsl_environment(
+          function()
+            init(alpha)
+            alpha()
+          end,
+          { },
+          create_dsl_env_mt(tset { "alpha" }, extra_context)
+        )
+    )
+
+  -- TODO: Not sure if it is a feature.
+  ensure_equals("context not shared", extra_context.not_shared, nil)
+
+  ensure_tdeepequals(
+      "handler called",
+      extra_context,
+      { tag = { called = true } }
+    )
+end)
+
+--------------------------------------------------------------------------------
+
+-- TODO: Remove this restriction.
+-- TODO: Hide system keys altogether.
+test "common-env-extra-context-reserved-names" (function()
+  ensure_fails_with_substring(
+      "run dsl",
+      function()
+        do_in_common_dsl_environment(
+            function() end,
+            { },
+            create_dsl_env_mt(tset { "alpha" }, { dsl_env = true })
+          )
+      end,
+      [[can't override system context key `dsl_env']]
+    )
 end)
 
 --------------------------------------------------------------------------------
