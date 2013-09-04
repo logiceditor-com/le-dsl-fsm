@@ -74,12 +74,6 @@ local capture_source_location
 
 --------------------------------------------------------------------------------
 
-local make_dsl_manager
-      = import 'dsl-fsm/dsl_manager.lua'
-      {
-        'make_dsl_manager'
-      }
-
 local create_dsl_env_mt,
       do_in_common_dsl_environment
       = import 'dsl-fsm/common_env.lua'
