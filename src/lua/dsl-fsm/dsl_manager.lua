@@ -48,6 +48,7 @@ local assert_is_table
       }
 
 local tclone,
+      tijoin_many,
       torderedset,
       torderedset_insert,
       torderedset_remove,
@@ -55,6 +56,7 @@ local tclone,
       = import 'lua-nucleo/table-utils.lua'
       {
         'tclone',
+        'tijoin_many',
         'torderedset',
         'torderedset_insert',
         'torderedset_remove',
@@ -206,7 +208,9 @@ do
 
   local unregister_proxy = function(self, proxy)
     assert(self.active_proxies_[proxy] ~= nil, "double finalization")
-    torderedset_remove(self.active_proxies_, proxy)
+    if not getmetatable(proxy):should_store_finalized_data() then
+      torderedset_remove(self.active_proxies_, proxy)
+    end
   end
 
   local proxy
@@ -219,6 +223,7 @@ do
       -- Assuming proxy is unregistered by do_transition
       setmetatable(proxy, nil)
       if is_table(self.data_) then
+        -- Note that proxy is always empty table.
         toverride_many(proxy, self.data_)
       end
 
@@ -572,6 +577,10 @@ do
           return self.proxy_
         end
 
+        local store_finalized_data = function(self)
+          getmetatable(self.proxy_):store_finalized_data()
+        end
+
         make_helper_wrapper = function(
             dsl_manager, namespace_name, proxy_object, at, context_data
           )
@@ -594,6 +603,8 @@ do
             --
             context = context;
             proxy = proxy; -- Yuck!
+            --
+            store_finalized_data = store_finalized_data;
             --
             namespace_ = namespace_name;
             proxy_ = proxy_object; -- Yuck.
@@ -638,6 +649,17 @@ do
       end
     end
 
+    -- TODO: Bad naming. Make more distiguishable from "should_...()"
+    local store_finalized_data = function(self)
+      method_arguments(self)
+      self.store_finalized_data_ = true
+    end
+
+    local should_store_finalized_data = function(self)
+      method_arguments(self)
+      return self.store_finalized_data_
+    end
+
     proxy = function(self, namespace_name, at, context)
       if at == nil then
         at = 2
@@ -668,6 +690,9 @@ do
           {
             force_finalization = force_finalization;
             --
+            store_finalized_data = store_finalized_data;
+            should_store_finalized_data = should_store_finalized_data;
+            --
             __index = mt_index;
             __newindex = mt_newindex;
             __call = mt_call;
@@ -679,6 +704,7 @@ do
             data_ = assert_is_table(self.fsm_.init.handler(helper));
             manager_ = self; -- Ugly
             in_transition_ = false;
+            store_finalized_data_ = false;
           }
         )
 
@@ -725,8 +751,10 @@ do
     end
 
     for i = #registry, 1, -1 do
-      local proxy = registry[i]
-      registry[i] = assert(getmetatable(proxy)):force_finalization(proxy)
+      local mt = getmetatable(registry[i])
+      if mt then -- May be already finalized
+        registry[i] = mt:force_finalization(registry[i])
+      end
     end
 
     if not self:good() then

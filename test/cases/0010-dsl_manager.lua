@@ -318,6 +318,104 @@ end)
 
 --------------------------------------------------------------------------------
 
+test "store-finalized-data" (function()
+
+  local fsm =
+  {
+    id = "fin";
+
+    init =
+    {
+      "fin()";
+      "fin.index";
+    };
+
+    states =
+    {
+      [false] = true;
+
+      ["fin()"] =
+      {
+        type = "call", id = "fin()";
+
+        false;
+
+        handler = function(self, t, store, value)
+          if store then
+            self:store_finalized_data()
+          end
+          return { value = value }
+        end;
+      };
+
+      ["fin.index"] =
+      {
+        type = "index", id = "fin.index";
+
+        "fin()"; -- Uncertainty to forbid auto-finalization.
+        false;
+
+        value = "index";
+
+        handler = function(self, t, k)
+          return { value = "index" }
+        end;
+      };
+    };
+  }
+
+  local dsl_manager = ensure("manager created", make_dsl_manager(fsm))
+
+  ensure_tdeepequals(
+      "auto-finalized",
+      ensure("proxy created", dsl_manager:proxy("fin"))(true, "finalized 1"),
+      {
+        value = "finalized 1";
+      }
+    )
+
+  ensure_tdeepequals(
+      "auto-finalized",
+      ensure("proxy created", dsl_manager:proxy("fin"))(false, "not finalized"),
+      {
+        value = "not finalized"
+      }
+    )
+
+  do
+    local proxy = ensure("proxy created", dsl_manager:proxy("fin"))
+    ensure_equals(
+        "not auto-finalized",
+        proxy.index,
+        proxy
+      )
+  end
+
+  ensure_tdeepequals(
+      "auto-finalized",
+      ensure("proxy created", dsl_manager:proxy("fin")).index(
+          true,
+          "finalized 2"
+        ),
+      {
+        value = "finalized 2";
+      }
+    )
+
+  ensure_tdeepequals(
+      "finalization result matches expected",
+      ensure("finalize manager", dsl_manager:finalize()),
+      {
+        -- Note: creation time order is important here.
+        { value = "finalized 1" };
+        { value = "index" };
+        { value = "finalized 2" };
+      }
+    )
+end)
+
+--------------------------------------------------------------------------------
+
 test "two-instances" (function()
 
   local num_factories = 0
