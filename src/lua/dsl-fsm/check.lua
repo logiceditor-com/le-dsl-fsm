@@ -291,7 +291,7 @@ do
           )
       end
 
-      local num_call_refs = 0
+      local call_ref = nil
       local unm_id = false
       local index_values = { }
 
@@ -309,13 +309,15 @@ do
         else
           if state.type == "index" or state.type == "call" then
             if ref.type == "call" then
-              num_call_refs = num_call_refs + 1
-              if num_call_refs > 1 then
+              if call_ref == nil then
+                call_ref = ref.id
+              else
                 checker:fail(
                     "bad fsm `" .. tostring(fsm.id) .. "' state `"
                  .. tostring(state.id)
-                 .. "' can reference at most one call state, found more (#"
-                 .. i .. ", `" .. tostring(ref.id) .. "')"
+                 .. " can reference at most one call state, found more (#"
+                 .. i .. ", `" .. tostring(ref.id) .. "'), already got `"
+                 .. tostring(call_ref) .. "'"
                   )
               end
             end
@@ -382,7 +384,7 @@ do
 
     -- TODO: DRY with common state validation above.
 
-    local num_call_refs = 0
+    local call_ref = nil
     local unm_id = false
     local index_values = { }
     for i = 1, #fsm.init do
@@ -396,12 +398,14 @@ do
          .. tostring(fsm.init[i]) .. "'"
           )
       elseif ref.type == "call" then
-        num_call_refs = num_call_refs + 1
-        if num_call_refs > 1 then
+        if call_ref == nil then
+          call_ref = ref.id
+        else
           checker:fail(
               "bad fsm `" .. tostring(fsm.id) .. "' init:"
            .. " can reference at most one call state, found more (#"
-           .. i .. ", `" .. tostring(ref.id) .. "')"
+           .. i .. ", `" .. tostring(ref.id) .. "'), already got `"
+           .. tostring(call_ref) .. "'"
             )
         end
       elseif ref.type == "unm" then
