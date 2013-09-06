@@ -136,6 +136,8 @@ test "minimal" (function()
         type = "final", id = false;
 
         handler = function(self, t, data)
+          ensure_equals("prev state id", self:prev_state_id(), "min:root.id")
+
           ensure("fsm_object was created", fsm_object)
           ensure("data_object was created", data_object)
           ensure_equals("self is fsm_object", self, fsm_object)
@@ -166,6 +168,8 @@ test "minimal" (function()
         value = "root";
 
         handler = function(self, t, data)
+          ensure_equals("prev state id", self:prev_state_id(), nil)
+
           ensure("fsm_object was created", fsm_object)
           ensure("data_object was created", data_object)
           ensure_equals("self is fsm_object", self, fsm_object)
@@ -197,6 +201,8 @@ test "minimal" (function()
         false;
 
         handler = function(self, t, data)
+          ensure_equals("prev state id", self:prev_state_id(), "min:root")
+
           ensure("fsm_object was created", fsm_object)
           ensure("data_object was created", data_object)
           ensure_equals("self is fsm_object", self, fsm_object)

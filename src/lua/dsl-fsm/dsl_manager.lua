@@ -315,6 +315,8 @@ do
 
     do_transition = function(self, to_state_id, proxy, ...)
 
+      self.prev_state_id_ = self.state_.id -- may be nil on init
+
       local transition = (self.state_.id or "(init)")
         .. "->" .. (to_state_id or "(final)")
       if self.in_transition_ then
@@ -581,6 +583,10 @@ do
           getmetatable(self.proxy_):store_finalized_data()
         end
 
+        local prev_state_id = function(self)
+          return getmetatable(self.proxy_):prev_state_id()
+        end
+
         make_helper_wrapper = function(
             dsl_manager, namespace_name, proxy_object, at, context_data
           )
@@ -590,6 +596,7 @@ do
             is_self = is_self;
             eat_self = eat_self;
             namespace = namespace;
+            prev_state_id = prev_state_id;
             --
             fail = fail;
             ensure = ensure;
@@ -660,6 +667,11 @@ do
       return self.store_finalized_data_
     end
 
+    local prev_state_id = function(self)
+      method_arguments(self)
+      return self.prev_state_id_
+    end
+
     proxy = function(self, namespace_name, at, context)
       if at == nil then
         at = 2
@@ -689,6 +701,7 @@ do
           proxy,
           {
             force_finalization = force_finalization;
+            prev_state_id = prev_state_id; -- Hack?
             --
             store_finalized_data = store_finalized_data;
             should_store_finalized_data = should_store_finalized_data;
@@ -705,6 +718,7 @@ do
             manager_ = self; -- Ugly
             in_transition_ = false;
             store_finalized_data_ = false;
+            prev_state_id_ = nil;
           }
         )
 
