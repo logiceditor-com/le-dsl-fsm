@@ -19,6 +19,14 @@ local is_string,
         'is_table'
       }
 
+local timap,
+      tset
+      = import 'lua-nucleo/table-utils.lua'
+      {
+        'timap',
+        'tset'
+      }
+
 local check_dsl_fsm_handler_chunk
       = import 'dsl-fsm/check.lua'
       {
@@ -102,10 +110,7 @@ local dsl_fsm_bootstrap_chunk = function()
     local call_meta_handler = param.call_meta_handler
     local apply_to_id = param.apply_to_id or "(-dsl).<ext*>.apply_to"
 
-    local outs = { }
-    for i = 1, #param.outs do
-      outs[#outs + 1] = "(-dsl)." .. param.outs[i]
-    end
+    local outs = param.outs
 
     states[#states + 1] =
     {
@@ -205,7 +210,15 @@ local dsl_fsm_bootstrap_chunk = function()
     }
   end
 
-  local outs = { "_index", "_call", "_field_call", "_method_call" }
+  local outs =
+  {
+    "(-dsl)._index";
+    "(-dsl)._call";
+    "(-dsl)._field_call";
+    "(-dsl)._method_call";
+    -- Added below:
+    -- (-dsl)._final;
+  }
 
   local extension_states = { }
 
@@ -407,7 +420,6 @@ local dsl_fsm_bootstrap_chunk = function()
     value = "_extend";
 
     meta_handler = function(self, t, extensions)
-      self:ensure_field_call(extensions)
       self:ensure_is("extensions", extensions, "table")
 
       return t, function()
@@ -426,6 +438,68 @@ local dsl_fsm_bootstrap_chunk = function()
       end
     end;
   }.apply_to(-(-_))
+
+  ;(-(-_))._extend
+  {
+    -- (-dsl)._final { param } .apply_to(meta_dsl_proxy)
+    (-(-_))._field_call
+    {
+      id = "(-dsl)._final";
+      from_init = true;
+      -- TODO: Lazy.
+      from = timap(function(out) return out .. "{param}" end, outs);
+
+      value = "_final";
+
+      meta_handler = function(self, t, param)
+        self:ensure_is("extensions", param, "table")
+
+        if is_string(param.from) then
+          param.from = { param.from }
+        end
+        self:ensure_is("from", param.from, "table")
+        if self:good() then
+          for i = 1, #param.from do
+            self:ensure_is("from[" .. i .. "]", param.from[i], "string")
+          end
+        end
+
+        self:ensure_is("handler", param.handler, "function")
+        if self:good() then
+          -- TODO: Improve error reporting by providing more details
+          --       in the chunk name.
+          check_dsl_fsm_handler_chunk(
+              self,
+              "handler",
+              param.handler
+            )
+        end
+
+        if self:good() then
+          param.from = tset(param.from)
+
+          t.states[#t.states + 1] =
+          {
+            type = "final"; id = false;
+
+            -- TODO: Avoid creating closure here.
+            handler = function(self, t)
+              if param.from[self:prev_state_id()] then
+                return param.handler(self, t)
+              end
+
+              return t
+            end;
+          }
+        end
+      end;
+
+      "(-dsl).<ext*>.apply_to";
+      "(-dsl)._final";
+      unpack(outs); -- Should be the last one.
+    }
+    ;
+  }
 end
 
 --------------------------------------------------------------------------------

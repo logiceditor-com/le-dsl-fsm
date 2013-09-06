@@ -239,7 +239,7 @@ test "common-env-bootstrap" (function()
   do
     local call_log = ""
     check(
-        "_extension",
+        "_extension, _final",
         function()
           (-_)._extension
           {
@@ -270,7 +270,9 @@ test "common-env-bootstrap" (function()
                 handler = function(self, t)
                   call_log = call_log .. ".delta;"
                 end;
-              };
+              }
+              ;
+
             (-_)
               ._method_call
               {
@@ -283,20 +285,33 @@ test "common-env-bootstrap" (function()
 
                 handler = function(self, t, _, v)
                   call_log = call_log
-                    .. self:namespace() .. ":epsilon(" .. tostring(v) .. ")"
+                    .. self:namespace() .. ":epsilon(" .. tostring(v) .. ");"
                 end;
               }
+              ._final
+              {
+                from = "alpha:epsilon()";
+
+                handler = function(self, t)
+                  call_log = call_log
+                    .. "~" .. self:namespace() .. ":epsilon;"
+                end;
+              }
+              ;
           }.apply_to(-alpha)
 
           local _ = alpha.beta(42).delta
           alpha:epsilon "foo"
+          local _ = alpha.beta(3.14).delta
         end,
         { }
       )
     ensure_strequals(
         "call log",
         call_log,
-        [[alpha.beta(42).delta;alpha:epsilon(foo)]]
+        [[alpha.beta(42).delta;]]
+     .. [[alpha:epsilon(foo);~alpha:epsilon;]]
+     .. [[alpha.beta(3.14).delta;]]
       )
   end
 
