@@ -587,8 +587,19 @@ do
           return getmetatable(self.proxy_):prev_state_id()
         end
 
+        local at = function(self)
+          return function(msg)
+            self.smart_msg_.msg = msg
+            return self.smart_msg_
+          end
+        end
+
         make_helper_wrapper = function(
-            dsl_manager, namespace_name, proxy_object, at, context_data
+            dsl_manager,
+            namespace_name,
+            proxy_object,
+            source_location,
+            context_data
           )
 
           return
@@ -610,6 +621,7 @@ do
             --
             context = context;
             proxy = proxy; -- Yuck!
+            at = at;
             --
             store_finalized_data = store_finalized_data;
             --
@@ -618,7 +630,7 @@ do
             dsl_manager_ = dsl_manager;
             smart_msg_ = setmetatable(
                 {
-                  at = at;
+                  at = source_location;
                   msg = nil;
                 },
                 {
@@ -714,7 +726,10 @@ do
             fsm_ = self.fsm_;
             helper_ = helper;
             state_ = assert(self.fsm_.init);
-            data_ = assert_is_table(self.fsm_.init.handler(helper));
+            data_ = assert_is_table(
+                self.fsm_.init.handler(helper),
+                "broken fsm init"
+              );
             manager_ = self; -- Ugly
             in_transition_ = false;
             store_finalized_data_ = false;

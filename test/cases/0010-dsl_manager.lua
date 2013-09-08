@@ -26,7 +26,8 @@ local ensure_tequals,
       ensure,
       ensure_equals,
       ensure_strequals,
-      ensure_returns
+      ensure_returns,
+      ensure_has_substring
       = import 'lua-nucleo/ensure.lua'
       {
         'ensure_tequals',
@@ -37,7 +38,8 @@ local ensure_tequals,
         'ensure',
         'ensure_equals',
         'ensure_strequals',
-        'ensure_returns'
+        'ensure_returns',
+        'ensure_has_substring'
       }
 
 local is_string,
@@ -259,6 +261,107 @@ test "minimal" (function()
     )
 
   -- No reference equality guarantees for data_object and result.
+
+end)
+
+--------------------------------------------------------------------------------
+
+test "at" (function()
+
+  local ats = { }
+
+  local fsm =
+  {
+    id = "at";
+
+    init =
+    {
+      "at:root";
+
+      handler = function(self)
+        ats["init"] = self:at()
+        return { }
+      end;
+    };
+
+    states =
+    {
+      [false] =
+      {
+        type = "final", id = false;
+
+        handler = function(self, t, data)
+          ats["final"] = self:at()
+        end;
+      };
+
+      ["at:root"] =
+      {
+        type = "index", id = "at:root";
+
+        "at:root()";
+
+        value = "root";
+
+        handler = function(self, t, data)
+          ats["at:root"] = self:at()
+        end;
+      };
+
+      -- TODO: Test unm as well.
+      ["at:root()"] =
+      {
+        type = "call", id = "at:root()";
+
+        false;
+
+        handler = function(self, t, data)
+          ats["at:root()"] = self:at()
+        end;
+      };
+    };
+  }
+
+  ensure(
+      "run",
+      do_in_environment(
+          ensure(
+              "load",
+              loadstring(
+                  [[DSL:proxy("at"):root()]],
+                   "=at-location-marker"
+                )
+            ),
+          {
+            DSL = ensure("create dsl manager", make_dsl_manager(fsm));
+          }
+        )
+    )
+
+  ensure_has_substring(
+      "init",
+      tostring(ensure("have ats[init]", ats["init"])("error-message-marker")),
+      "at-location-marker:1: error-message-marker"
+    )
+
+  ensure_has_substring(
+      "at:root",
+      tostring(
+          ensure("have ats[at:root]", ats["at:root"])("error-message-marker")
+        ),
+      "at-location-marker:1: error-message-marker"
+    )
+
+  ensure_has_substring(
+      "at:root()",
+      tostring(
+          ensure(
+              "have ats[at:root()]",
+              ats["at:root()"]
+            )("error-message-marker")
+        ),
+      "at-location-marker:1: error-message-marker"
+    )
 
 end)
 
