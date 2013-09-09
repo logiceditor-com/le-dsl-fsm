@@ -520,6 +520,7 @@ do
         local delegate = function(method)
 
           return function(self, ...)
+            method_arguments(self)
             return self.dsl_manager_[method](
                 self.dsl_manager_,
                 ...
@@ -530,6 +531,10 @@ do
         local delegate_with_msg = function(method)
 
           return function(self, msg, ...)
+            method_arguments(
+                self,
+                "string", msg
+              )
             self.smart_msg_.msg = msg -- Hack.
             return self.dsl_manager_[method](
                 self.dsl_manager_,
@@ -547,48 +552,69 @@ do
         local ensure_is = delegate_with_msg("ensure_is")
 
         local ensure_method_call = function(self, t)
+          method_arguments(self)
           return self:ensure("method call required", self:is_self(t))
         end
 
         local ensure_field_call = function(self, t)
+          method_arguments(self)
           return self:ensure("field call required", not self:is_self(t))
         end
 
         local good = delegate("good")
 
         local is_self = function(self, t)
+          method_arguments(self)
+
           return t == self.proxy_
         end
 
         local eat_self = function(self, t, ...)
+          method_arguments(self)
+
           if self:is_self(t) then
             return ...
           end
+
           return t, ...
         end
 
         local namespace = function(self)
+          method_arguments(self)
+
           return self.namespace_
         end
 
         local context = function(self)
+          method_arguments(self)
+
           return self.context_
         end
 
         local proxy = function(self)
+          method_arguments(self)
+
           return self.proxy_
         end
 
         local store_finalized_data = function(self)
+          method_arguments(self)
+
           getmetatable(self.proxy_):store_finalized_data()
         end
 
         local prev_state_id = function(self)
+          method_arguments(self)
+
           return getmetatable(self.proxy_):prev_state_id()
         end
 
         local at = function(self)
+          method_arguments(self)
+
           return function(msg)
+            arguments("string", msg)
+
             self.smart_msg_.msg = msg
             return self.smart_msg_
           end
