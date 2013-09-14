@@ -88,23 +88,23 @@ local test = (...)("dsl-fsm-dsl_bootstrap")
 
 --------------------------------------------------------------------------------
 
-test "common-env-bootstrap" (function()
-  local check = function(msg, dsl_chunk, expected_result)
-    local result = ensure(
-        msg .. " do in common dsl environment run",
-        do_in_common_dsl_environment(
-            { dsl_fsm_bootstrap_chunk, dsl_chunk },
-            { },
-            create_dsl_env_mt(tset { "_", "alpha" })
-          )
-      )
-    ensure_tdeepequals(
-        msg .. " result matches expected",
-        result,
-        expected_result
-      )
-  end
+local check = function(msg, dsl_chunk, expected_result)
+  local result = ensure(
+      msg .. " do in common dsl environment run",
+      do_in_common_dsl_environment(
+          { dsl_fsm_bootstrap_chunk, dsl_chunk },
+          { },
+          create_dsl_env_mt(tset { "_", "alpha" })
+        )
+    )
+  ensure_tdeepequals(
+      msg .. " result matches expected",
+      result,
+      expected_result
+    )
+end
 
+test "common-env-bootstrap-index-without-apply_to" (function()
   do
     -- TODO: Test not only _index, others too
     ensure_error_with_substring(
@@ -128,7 +128,9 @@ test "common-env-bootstrap" (function()
         }
       )
   end
+end)
 
+test "common-env-bootstrap-_index" (function()
   do
     local handler_called = false
     check(
@@ -154,7 +156,9 @@ test "common-env-bootstrap" (function()
       )
     ensure("handler called", handler_called)
   end
+end)
 
+test "common-env-bootstrap-_call" (function()
   do
     local handler_called = false
     check(
@@ -179,7 +183,9 @@ test "common-env-bootstrap" (function()
       )
     ensure("handler called", handler_called)
   end
+end)
 
+test "common-env-bootstrap-_field_call" (function()
   do
     local handler_called = false
     check(
@@ -207,7 +213,9 @@ test "common-env-bootstrap" (function()
       )
     ensure("handler called", handler_called)
   end
+end)
 
+test "common-env-bootstrap-_method_call" (function()
   do
     local handler_called = false
     check(
@@ -235,7 +243,9 @@ test "common-env-bootstrap" (function()
       )
     ensure("handler called", handler_called)
   end
+end)
 
+test "common-env-bootstrap-_extension-and-_final" (function()
   do
     local call_log = ""
     check(
@@ -314,7 +324,9 @@ test "common-env-bootstrap" (function()
      .. [[alpha.beta(3.14).delta;]]
       )
   end
+end)
 
+test "common-env-bootstrap-_extend" (function()
   do
     local call_log = ""
     check(
