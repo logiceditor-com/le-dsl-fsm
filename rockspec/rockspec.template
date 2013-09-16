@@ -3,7 +3,7 @@ version = "${VERSION}"
 source =
 {
   url = "git://github.com/logiceditor-com/le-dsl-fsm.git";
-  branch = ${BRANCH};
+  branch = "${BRANCH}";
 }
 description =
 {

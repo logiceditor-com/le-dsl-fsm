@@ -3,7 +3,7 @@ version = "scm-1"
 source =
 {
   url = "git://github.com/logiceditor-com/le-dsl-fsm.git";
-  branch = master;
+  branch = "master";
 }
 description =
 {
