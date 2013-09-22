@@ -10,6 +10,8 @@ Copyright (c) 2013, le-dsl-fsm authors (see `AUTHORS`)
 
 See file `COPYRIGHT` for the license.
 
+**TODO: We need a TOC, generate one**
+
 ## Project status
 
 Current version v0.9.0 is a beta release.
@@ -454,7 +456,88 @@ O, here they come.
 
 ## The Finite State Machine approach
 
-**TODO: document!**
+### A generic DSL proxy object
+
+Lets review our DSL construct:
+
+```Lua
+foo:bar "title"
+{
+  data = "here";
+}
+```
+
+It is a series of index and call operations:
+
+```Lua
+local foo = _G["foo"]
+local bar = foo["bar"]
+local tmp = bar(foo, "title")
+tmp({ data = "here"})
+```
+
+It is possible to build a proxy object that returns itself from `__index`
+and `__call` metamethods:
+
+```Lua
+require 'lua-nucleo.import'
+local tstr = import 'lua-nucleo/tstr.lua' { 'tstr' } -- Table serialization
+local proxy = function(namespace)
+  local self = { }
+  local method_name = nil
+
+  io.write(namespace)
+
+  return setmetatable(
+      self,
+      {
+        __index = function(t, k)
+          io.write(("[%q]"):format(tostring(k)))
+          return self
+        end;
+
+        __call = function(t, ...)
+          method_call = (select(1, ...) == self)
+          need_comma = false
+
+          io.write("(")
+          for i = 1, select("#", ...) do
+            if i == 1 and method_call then
+              io.write(namespace)
+            else
+              io.write(
+                  need_comma and ", " or "",
+                  tstr( (select(i, ...)) )
+                )
+            end
+            need_comma = true
+          end
+          io.write(")")
+          return self
+        end;
+      }
+    )
+end
+
+setmetatable(_G, { __index = function(t, k) return proxy(k) end })
+```
+
+This would allow us to load any sane DSL construct:
+
+```Lua
+foo:bar "title"
+  .alpha
+  .beta "gamma"
+{
+  data = "here";
+}
+--> Should print:
+--> foo["bar"](foo, "title")["alpha"]["beta"]("gamma")({data="here"})
+```
+
+**TODO: Document the FSM approach.**
+
+**TODO: Don't forget to document auto-finalization (after FSM is described).**
 
 ## Some additional remarks on the design
 
