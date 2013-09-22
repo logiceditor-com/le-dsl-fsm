@@ -11,6 +11,7 @@ Copyright (c) 2013, le-dsl-fsm authors (see `AUTHORS`)
 See file `COPYRIGHT` for the license.
 
 **TODO: We need a TOC, generate one**
+
 **TODO: We also need a short tl;dr description before that wall of text.**
 
 ## Project status
