@@ -271,7 +271,7 @@ This older approach does work as follows:
     }
     ```
 
-    In memory (none non-hygienic `id` and `name` keys):
+    In memory (note non-hygienic `id` and `name` keys):
 
     ```Lua
     {
