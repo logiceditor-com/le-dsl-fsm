@@ -428,7 +428,7 @@ using it would be like all others. But, as we can see from examples, not
 every DSL needs to use namespaces, some tend to use unlimited chain calls,
 etc. etc. Hardcoded DSL forms are the main limitation.
 
-Each new supported DSL form would bloat the code DSL handling code even more.
+Each new supported DSL form would bloat the core DSL handling code even more.
 The implementation would become truly spaghetti-like to support something
 like this DSL construct:
 
