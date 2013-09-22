@@ -3,8 +3,10 @@ le-dsl-fsm: The Lua DSL FSM library
 
 Builiding internal Lua 5.1 Domain-Specific Languages as Finite State Machines.
 
+<pre>
 Copyright (c) 2013, LogicEditor <info@logiceditor.com>
 Copyright (c) 2013, le-dsl-fsm authors (see `AUTHORS`)
+</pre>
 
 See file `COPYRIGHT` for the license.
 
@@ -119,7 +121,6 @@ Simple data table, order-dependent sections (from Premake):
 solution "MyApplication"
   configurations { "Debug", "Release" }
 
-  -- A project defines one build target
   project "MyApplication"
     kind "ConsoleApp"
     language "C++"
@@ -163,20 +164,20 @@ All DSL constructs above are built upon a few basic tricks:
 * Chained function calls: in Lua a function can return a function:
 
   ```Lua
-  local function cat(str)
-    io.stdout:write(tostring(str))
-    return cat
-  end
+local function cat(str)
+  io.stdout:write(tostring(str))
+  return cat
+end
 
-  cat "This" " is " "fun"
+cat "This" " is " "fun"
   ```
 
   Without sugar:
 
   ```Lua
-  local tmp1 = cat("This")
-  local tmp2 = tmp1(" is ")
-  tmp2("fun")
+local tmp1 = cat("This")
+local tmp2 = tmp1(" is ")
+tmp2("fun")
   ```
 
 Thus, our basic DSL building block:
@@ -261,20 +262,20 @@ This older approach does work as follows:
    In DSL:
 
    ```Lua
-   foo:bar "title"
-   {
-     data = "here";
-   }
+foo:bar "title"
+{
+  data = "here";
+}
    ```
 
    In memory (none non-hygienic `id` and `name` keys):
 
    ```Lua
-   {
-     id = "foo:bar";
-     name = "title";
-     data = "here";
-   }
+{
+  id = "foo:bar";
+  name = "title";
+  data = "here";
+}
    ```
 
    All non-trivial validation and actual data processing is then done with
@@ -285,23 +286,23 @@ This older approach does work as follows:
    In DSL:
 
    ```Lua
-   cfg:node "branch"
-   {
-     cfg:string "remote";
-   }
+cfg:node "branch"
+{
+  cfg:string "remote";
+}
    ```
 
    In memory:
 
    ```Lua
-   {
-     id = "cfg:node";
-     name = "branch";
-     {
-       id = "cfg:string";
-       name = "remote";
-     };
-   }
+{
+  id = "cfg:node";
+  name = "branch";
+  {
+    id = "cfg:string";
+    name = "remote";
+  };
+}
    ```
 
 2. The conversion rules support a limited set of DSL construct forms,
@@ -317,21 +318,21 @@ This older approach does work as follows:
    A simplified illustrative example of such proxy object:
 
    ```Lua
-   local proxy = function(namespace)
-     return setmetatable(
-         { },
-         {
-           __index = function(t, tag)
-             return function(data)
-               data.id = namespace .. ":" .. tag
-               return data
-             end
-           end;
-         }
-       )
-   end
+local proxy = function(namespace)
+  return setmetatable(
+      { },
+      {
+        __index = function(t, tag)
+          return function(data)
+            data.id = namespace .. ":" .. tag
+            return data
+          end
+        end;
+      }
+    )
+end
 
-   foo = proxy("foo") -- A global variable
+foo = proxy("foo") -- A global variable
    ```
 
    Not shown in the example:
@@ -347,30 +348,30 @@ This older approach does work as follows:
    A simplified illustrative example:
 
    ```Lua
-   local chunk = function() -- Usually returned by loadfile().
-     foo:bar "title"
-     {
-       data = "here";
-     }
-   end
+local chunk = function() -- Usually returned by loadfile().
+  foo:bar "title"
+  {
+    data = "here";
+  }
+end
 
-   local proxy_manager = ...
+local proxy_manager = ...
 
-   local env = setmetatable(
-       {
-         print = print; -- For debugging
-       },
-       {
-         __index = function(t, namespace)
-           return proxy_manager:proxy(namespace)
-         end;
-       }
-     )
+local env = setmetatable(
+    {
+      print = print; -- For debugging
+    },
+    {
+      __index = function(t, namespace)
+        return proxy_manager:proxy(namespace)
+      end;
+    }
+  )
 
-   setfenv(chunk, env)
-   chunk() -- Usually an xpcall() with advanced error handling.
+setfenv(chunk, env)
+chunk() -- Usually an xpcall() with advanced error handling.
 
-   local dsl_objects = proxy_manager:result()
+local dsl_objects = proxy_manager:result()
    ```
 
    Note that proxy objects are not cached -- each global lookup should
@@ -383,40 +384,40 @@ This older approach does work as follows:
    A simplified illustrative example:
 
    ```Lua
-   local walkers = { down = { }, up = { } }
+local walkers = { down = { }, up = { } }
 
-   setmetatable(
-       walkers.down,
-       {
-         __index = function(t, id)
-           error("unknown DSL construct `" .. tosting(id) .. "'")
-         end;
-       }
-     )
+setmetatable(
+    walkers.down,
+    {
+      __index = function(t, id)
+        error("unknown DSL construct `" .. tosting(id) .. "'")
+      end;
+    }
+  )
 
-   walkers.down["foo:bar"] = function(self, node)
-     io.stdout:write("<foo:bar name=", xml_escape(node.name), ">\n",)
-   end
+walkers.down["foo:bar"] = function(self, node)
+  io.stdout:write("<foo:bar name=", xml_escape(node.name), ">\n",)
+end
 
-   walkers.down["foo:cdata"] = function(self, node)
-     io.stdout:write("<![CDATA[", cdata_escape(node.text), "]]>\n")
-   end
+walkers.down["foo:cdata"] = function(self, node)
+  io.stdout:write("<![CDATA[", cdata_escape(node.text), "]]>\n")
+end
 
-   walkers.up["foo:bar"] = function(self, node)
-     io.stdout:write("</foo:bar>\n")
-   end
+walkers.up["foo:bar"] = function(self, node)
+  io.stdout:write("</foo:bar>\n")
+end
 
-   handle_dsl(function()
-     foo:bar "baz"
-     {
-       foo:cdata [[quo]];
-     }
-   end)
+handle_dsl(function()
+  foo:bar "baz"
+  {
+    foo:cdata [[quo]];
+  }
+end)
 
-   --> Should print:
-   --> <foo:bar name="baz">
-   -->   <![CDATA[quo]]>
-   --> </foo:bar>
+--> Should print:
+--> <foo:bar name="baz">
+-->   <![CDATA[quo]]>
+--> </foo:bar>
    ```
 
 This approach to building DSLs works, but it lacks flexibility. Each new DSL
