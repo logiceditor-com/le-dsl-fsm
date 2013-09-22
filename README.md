@@ -426,7 +426,7 @@ This older approach does work as follows:
 This approach to building DSLs works, but it lacks flexibility. Each new DSL
 using it would be like all others. But, as we can see from examples, not
 every DSL needs to use namespaces, some tend to use unlimited chain calls,
-etc. etc. Hardcoded DSL forms are the main limitation.
+etc. etc. Hardcoded DSL construct forms are the main limitation.
 
 Each new supported DSL form would bloat the core DSL handling code even more.
 The implementation would become truly spaghetti-like to support something
