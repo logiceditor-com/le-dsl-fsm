@@ -933,7 +933,7 @@ above.
 
 **TODO: document!**
 
-## Some additional remarks on the design and implementation
+## Some additional remarks on the implementation
 
 ### On performance
 
