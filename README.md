@@ -1,7 +1,7 @@
 le-dsl-fsm: The Lua DSL FSM library
 ===================================
 
-Builiding internal Lua 5.1 Domain-Specific Languages as Finite-State Machines.
+Building internal Lua 5.1 Domain-Specific Languages as Finite-State Machines.
 
 <pre>
 Copyright (c) 2013, LogicEditor <info@logiceditor.com>
@@ -37,7 +37,7 @@ full-blown validation and comprehensible diagnostics for that DSL.
 *Note on terminology: Internal or embedded DSLs are DSLs which [ab]use host
 general-purpose language syntax to gave user a feeling that he is
 writing in a different, domain-specific language. I.e. code in
-internal Lua DSL is valid Lua code, that loadfile() would understand
+internal Lua DSL is valid Lua code, that `loadfile()` would understand
 without modifications.*
 
 ### Project goals
