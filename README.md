@@ -454,7 +454,7 @@ O, here they come.
 ]]
 ```
 
-## The Finite State Machine approach
+## The Finite-State Machine approach
 
 ### A generic DSL proxy object
 
@@ -568,8 +568,8 @@ foo:bar "baz"
 
 ...FSM can be described as follows (in pseudocode):
 
-*TODO: Try to find a commonly understood text-based format for FSM descriptions,
-do not invent yet another one.*
+*TODO: Try to find a commonly understood _text-based_ format
+for FSM descriptions, do not invent yet another one.*
 
 ```
 INIT | index "bar" -> foo.bar
@@ -610,7 +610,7 @@ Several things to note here:
 * Each state in the FSM must be reachable from the `INIT` state. The `FINAL`
   state must be reachable from every other state in the FSM.
 
-## State transition handlers
+### State transition handlers
 
 *NOTE: At this point, we let user provide not state transition handlers,
 but less generic and less flexible state entrance handlers.
@@ -782,7 +782,7 @@ to implement. That being said, this is a very low level format of
 DSL description, and a lot of boilerplate code is to be expected.
 We'll tackle that later.
 
-## On DSL proxy finalization
+### On DSL proxy finalization
 
 Our new FSM-based approach to DSL implementation has an interesting side-effect:
 now we can know when we can finalize our proxy object and replace it with actual
@@ -915,21 +915,21 @@ above.
 
 **TODO: Describe why one would want to use `self:store_finalized_data()`**
 
-## Meta: on-the-fly FSM modifications
+### Meta: on-the-fly FSM modifications
 
 **TODO: document!**
 
-## Meta-handlers
+#### Meta-handlers
 
-## Common DSL environment
-
-**TODO: document!**
-
-## Low-level bootstrap
+### Common DSL environment
 
 **TODO: document!**
 
-## Higher-level bootstraps
+### Low-level bootstrap
+
+**TODO: document!**
+
+### Higher-level bootstraps
 
 **TODO: document!**
 
