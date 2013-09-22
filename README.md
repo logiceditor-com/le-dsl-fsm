@@ -1,7 +1,7 @@
 le-dsl-fsm: The Lua DSL FSM library
 ===================================
 
-Builiding internal Lua 5.1 Domain-Specific Languages as Finite State Machines.
+Builiding internal Lua 5.1 Domain-Specific Languages as Finite-State Machines.
 
 <pre>
 Copyright (c) 2013, LogicEditor <info@logiceditor.com>
@@ -535,11 +535,271 @@ foo:bar "title"
 --> foo["bar"](foo, "title")["alpha"]["beta"]("gamma")({data="here"})
 ```
 
-**TODO: Document the FSM approach.**
+Note that, obviously, for every single given DSL construct the operation
+(index or call) chain would always be linear. Call goes after index after call,
+and so on, one after another.
 
-**TODO: Don't forget to document auto-finalization (after FSM is described).**
+### The DSL FSM
 
-## Some additional remarks on the design
+While our generic DSL proxy approach allows us to load _any_ DSL construct,
+we (usually) do not want to.
+
+If we have to be able to load any possible DSL construct, we'd have to store
+loaded data in a generic form that can represent _any_ possible construct.
+And the validation would have to be done later anyway, so we would not actually
+win anything, just complicate things.
+
+Much better to fail early on invalid constructs, and get rid of intermediate
+data representation altogether. DSL library user does not want to deal with
+DSL data tree, he needs to work with his problem-specific data.
+
+To achieve early validation we can describe our proxy behavior as a
+finite-state machine where each operation (index or call) would be a state
+transition.
+
+For example, for our `foo:bar` example with `foo:cdata`:
+
+```Lua
+foo:bar "baz"
+{
+  foo:cdata [[quo]];
+}
+```
+
+...FSM can be described as follows (in pseudocode):
+
+*TODO: Try to find a commonly understood text-based format for FSM descriptions,
+do not invent yet another one.*
+
+```
+INIT | index "bar" -> foo.bar
+       foo.bar | call -> foo.bar.name
+  foo.bar.name | call -> foo.bar.name.param
+FINAL <- foo.bar.name.param
+
+INIT | index "cdata" -> foo.cdata
+  foo.cdata | call -> foo.cdata.text
+FINAL <- foo.cdata.text
+```
+
+Several things to note here:
+
+* On this level of abstraction method calls (`foo:bar()`) can not be
+  distinguished from field calls (`foo.bar()`) or even from plain calls
+  (`foo()`). Such distinction is to be done somewhere on higher level
+  (we'll get to that later).
+
+* There can be several different index operation transitions defined
+  for each state (including initial but excluding terminal ones).
+
+  However there can be at most one call operation transition for a given state
+  (because it is not possible to separate one call from another without
+  looking at arguments, and we choose not to do so at this low level).
+
+  A state may have both index (zero to many) and call (at most one)
+  transitions.
+
+* Terminal (`FINAL`) state is described explicitly, separately from actual
+  terminal states (`foo.bar""{}` and `foo.cdata[[]]`). It is easier
+  to manage when one has many routes to the terminal state and one has
+  to provide a handler to do something when the final state is reached.
+  More on that later.
+
+  A state may have at most one terminal transition.
+
+* Each state in the FSM must be reachable from the `INIT` state. The `FINAL`
+  state must be reachable from every other state in the FSM.
+
+## State transition handlers
+
+*NOTE: At this point, we let user provide not state transition handlers,
+but less generic and less flexible state entrance handlers.
+TODO: Probably a redesign is in order.*
+
+Now we can implement our DSL code as a set of FSM state transition handlers.
+
+Here is a simplified illustrative example of the XML output example seen above:
+
+*Note: See below for full DSL FSM data format documentation.*
+
+```Lua
+local fsm =
+{
+  id = "foo";
+
+  init =
+  {
+    "foo.bar";
+    "foo.cdata";
+  };
+
+  states =
+  {
+    [false] = true; -- Use default terminal state handler
+
+    ["foo.bar"] =
+    {
+      type = "index", id = "foo.bar";
+
+      "foo.bar.name";
+
+      value = "bar";
+    };
+
+    ["foo.bar.name"] =
+    {
+      type = "call", id = "foo.bar.name";
+
+      "foo.bar.name.param";
+
+      handler = function(self, t, _, name)
+        -- `_' is `self' of method call, we ignore it
+        t.name = name -- Validation not shown for readability
+      end;
+    };
+
+    ["foo.bar.name.param"] =
+    {
+      type = "call", id = "foo.bar.name.param";
+
+      false; -- Terminal state
+
+      handler = function(self, t, param)
+        io.write("<foo name=", xml_escape(t.name), ">\n")
+        for i = 1, #param do
+          if type(param[i]) == "table" then
+            io.write(assert(param[i].xml))
+          else
+            io.write(tostring(param[i]))
+          end
+        end
+        io.write("</foo>\n")
+      end;
+    };
+
+    ["foo.cdata"] =
+    {
+      type = "index", id = "foo.cdata";
+
+      "foo.cdata.text";
+
+      value = "cdata";
+    };
+
+    ["foo.cdata.text"] =
+    {
+      type = "call", id = "foo.bar.text";
+
+      handler = function(self, t, text)
+        t.xml = "<![CDATA[" .. cdata_escape(text) .. "]]>"
+      end;
+    };
+  };
+}
+```
+
+Here we did render XML code directly. It is useful for simpler cases,
+but for more complex DSLs, a problem-specific intermediate data format
+of some kind is still likely to be needed. So, if we'd wanted to,
+we could instead produce a table hierarchy, compatible with up/down walker
+code shown above:
+
+```Lua
+local fsm =
+{
+  id = "foo";
+
+  init =
+  {
+    "foo.bar";
+    "foo.cdata";
+  };
+
+  states =
+  {
+    [false] = true; -- Use default terminal state handler
+
+    ["foo.bar"] =
+    {
+      type = "index", id = "foo.bar";
+
+      "foo.bar.name";
+
+      value = "bar";
+    };
+
+    ["foo.bar.name"] =
+    {
+      type = "call", id = "foo.bar.name";
+
+      "foo.bar.name.param";
+
+      handler = function(self, t, _, name)
+        t.name = name
+      end;
+    };
+
+    ["foo.bar.name.param"] =
+    {
+      type = "call", id = "foo.bar.name.param";
+
+      false; -- Terminal state
+
+      handler = function(self, t, param)
+        param.id = "foo:bar"
+        param.name = t.name
+        return param -- Note t being replaced by param
+      end;
+    };
+
+    ["foo.cdata"] =
+    {
+      type = "index", id = "foo.cdata";
+
+      "foo.cdata.text";
+
+      value = "cdata";
+    };
+
+    ["foo.cdata.text"] =
+    {
+      type = "call", id = "foo.bar.text";
+
+      handler = function(self, t, text)
+        t.id = "foo:cdata"
+        t.text = text
+      end;
+    };
+  };
+}
+```
+
+Suddenly, even the most Byzantine DSL constructs start to look easier
+to implement. That being said, this is a very low level format of
+DSL description, and a lot of boilerplate code is to be expected.
+We'll tackle that later.
+
+## On auto-finalization
+
+**TODO: document!**
+
+## Meta: FSM modifications
+
+**TODO: document!**
+
+## Common DSL environment
+
+**TODO: document!**
+
+## Low-level bootstrap
+
+**TODO: document!**
+
+## Higher-level bootstraps
+
+**TODO: document!**
+
+## Some additional remarks on the design and implementation
 
 ### On performance
 
@@ -615,3 +875,8 @@ but please CC the maintainer and write `lua-dsl-fsm` somewhere in the subject.
 
 Private consulting is available on commercial basis. Should you need it,
 please contact LogicEditor at consulting@logiceditor.com.
+
+# TODO
+
+* Create GH issues for all TODO items in text and code.
+* Test that all code examples in this document actually work.
