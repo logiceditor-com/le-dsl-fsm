@@ -793,9 +793,9 @@ For the FSM from the last example, whenever proxy object reaches a terminal
 state, it can be automatically finalized and replaced with its data (`t`
 argument in handlers).
 
-DSL FSM proxy object is always an empty table with a fancy metatable set to it.
-All proxy object data is stored in that metatable, not in the table. This way,
-if we remove the metatable and copy all `t` keys and values to that table,
+A DSL FSM proxy object is always an empty table with a fancy metatable set
+to it. All proxy object data is stored in that metatable, not in the table. This
+way, if we remove the metatable and copy all `t` keys and values to that table,
 we'll effectively get the finalized data object right in the same place where
 proxy object was. (Of course, all references to `t` would no longer be valid,
 but it is a small price to pay.)
@@ -848,7 +848,7 @@ PROXY "bar"
 To simplify handler code, current implementation automatically finalizes
 all proxies that are passed as arguments to the handler (including
 table keys and values). That is why in a previous FSM example we could
-access `param[i].xml` from `foo:cdata` directly:
+access `param[i].xml` from `foo:cdata` directly in the `foo:bar` handler:
 
 ```Lua
 handler = function(self, t, param)
