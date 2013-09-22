@@ -164,20 +164,20 @@ All DSL constructs above are built upon a few basic tricks:
 * Chained function calls: in Lua a function can return a function:
 
   ```Lua
-local function cat(str)
-  io.stdout:write(tostring(str))
-  return cat
-end
+  local function cat(str)
+    io.stdout:write(tostring(str))
+    return cat
+  end
 
-cat "This" " is " "fun"
+  cat "This" " is " "fun"
   ```
 
   Without sugar:
 
   ```Lua
-local tmp1 = cat("This")
-local tmp2 = tmp1(" is ")
-tmp2("fun")
+  local tmp1 = cat("This")
+  local tmp2 = tmp1(" is ")
+  tmp2("fun")
   ```
 
 Thus, our basic DSL building block:
@@ -256,169 +256,169 @@ outline is given here. Please refer to the talk slides for more details
 
 This older approach does work as follows:
 
-1. All DSL constructs are converted to plain Lua tables by the core DSL code,
-   using a set of semi-hardcoded rules:
+1.  All DSL constructs are converted to plain Lua tables by the core DSL code,
+    using a set of semi-hardcoded rules:
 
-   In DSL:
+    In DSL:
 
-   ```Lua
-foo:bar "title"
-{
-  data = "here";
-}
-   ```
+    ```Lua
+    foo:bar "title"
+    {
+      data = "here";
+    }
+    ```
 
-   In memory (none non-hygienic `id` and `name` keys):
+    In memory (none non-hygienic `id` and `name` keys):
 
-   ```Lua
-{
-  id = "foo:bar";
-  name = "title";
-  data = "here";
-}
-   ```
+    ```Lua
+    {
+      id = "foo:bar";
+      name = "title";
+      data = "here";
+    }
+    ```
 
-   All non-trivial validation and actual data processing is then done with
-   these tables.
+    All non-trivial validation and actual data processing is then done with
+    these tables.
 
-   Nested DSL constructs naturally result in nested tables:
+    Nested DSL constructs naturally result in nested tables:
 
-   In DSL:
+    In DSL:
 
-   ```Lua
-cfg:node "branch"
-{
-  cfg:string "remote";
-}
-   ```
+    ```Lua
+    cfg:node "branch"
+    {
+      cfg:string "remote";
+    }
+    ```
 
-   In memory:
+    In memory:
 
-   ```Lua
-{
-  id = "cfg:node";
-  name = "branch";
-  {
-    id = "cfg:string";
-    name = "remote";
-  };
-}
-   ```
-
-2. The conversion rules support a limited set of DSL construct forms,
-   each new form requires non-trivial core DSL library code modification.
-   (See slides for a list of supported forms.)
-
-3. Debug information (file and line for the first call in chain for the
-   DSL construct) is stored alongside with construct's data to allow
-   for nice error messages when validation code detects an error.
-
-3. Actual conversion is done by a proxy object which collects the data.
-
-   A simplified illustrative example of such proxy object:
-
-   ```Lua
-local proxy = function(namespace)
-  return setmetatable(
-      { },
+    ```Lua
+    {
+      id = "cfg:node";
+      name = "branch";
       {
-        __index = function(t, tag)
-          return function(data)
-            data.id = namespace .. ":" .. tag
-            return data
-          end
-        end;
-      }
-    )
-end
+        id = "cfg:string";
+        name = "remote";
+      };
+    }
+    ```
 
-foo = proxy("foo") -- A global variable
-   ```
+2.  The conversion rules support a limited set of DSL construct forms,
+    each new form requires non-trivial core DSL library code modification.
+    (See slides for a list of supported forms.)
 
-   Not shown in the example:
+3.  Debug information (file and line for the first call in chain for the
+    DSL construct) is stored alongside with construct's data to allow
+    for nice error messages when validation code detects an error.
 
-   * Source location capture in `__index`. Done via `debug.getinfo()`.
-   * Support for multiple DSL construct forms.
-   * Dangling (or optional) data call handling. All proxies are registered
+3.  Actual conversion is done by a proxy object which collects the data.
+
+    A simplified illustrative example of such proxy object:
+
+    ```Lua
+    local proxy = function(namespace)
+      return setmetatable(
+          { },
+          {
+            __index = function(t, tag)
+              return function(data)
+                data.id = namespace .. ":" .. tag
+                return data
+              end
+            end;
+          }
+        )
+    end
+
+    foo = proxy("foo") -- A global variable
+    ```
+
+    Not shown in the example:
+
+    * Source location capture in `__index`. Done via `debug.getinfo()`.
+    * Support for multiple DSL construct forms.
+    * Dangling (or optional) data call handling. All proxies are registered
      in a global manager object, and then cleaned up after DSL is loaded.
 
-4. DSL code is executed in a special global environment, with `__index`
-   set to return a proxy object for each unknown global read.
+4.  DSL code is executed in a special global environment, with `__index`
+    set to return a proxy object for each unknown global read.
 
-   A simplified illustrative example:
+    A simplified illustrative example:
 
-   ```Lua
-local chunk = function() -- Usually returned by loadfile().
-  foo:bar "title"
-  {
-    data = "here";
-  }
-end
+    ```Lua
+    local chunk = function() -- Usually returned by loadfile().
+      foo:bar "title"
+      {
+        data = "here";
+      }
+    end
 
-local proxy_manager = ...
+    local proxy_manager = ...
 
-local env = setmetatable(
-    {
-      print = print; -- For debugging
-    },
-    {
-      __index = function(t, namespace)
-        return proxy_manager:proxy(namespace)
-      end;
-    }
-  )
+    local env = setmetatable(
+        {
+          print = print; -- For debugging
+        },
+        {
+          __index = function(t, namespace)
+            return proxy_manager:proxy(namespace)
+          end;
+        }
+      )
 
-setfenv(chunk, env)
-chunk() -- Usually an xpcall() with advanced error handling.
+    setfenv(chunk, env)
+    chunk() -- Usually an xpcall() with advanced error handling.
 
-local dsl_objects = proxy_manager:result()
-   ```
+    local dsl_objects = proxy_manager:result()
+    ```
 
-   Note that proxy objects are not cached -- each global lookup should
-   result in a new proxy being created, so multiple `foo:bar` calls would
-   create separate DSL table objects.
+    Note that proxy objects are not cached -- each global lookup should
+    result in a new proxy being created, so multiple `foo:bar` calls would
+    create separate DSL table objects.
 
-5. Table hierarchies are then traversed depth-first, with user-supplied
-   callbacks on downward and upward node traversal for each node `id`.
+5.  Table hierarchies are then traversed depth-first, with user-supplied
+    callbacks on downward and upward node traversal for each node `id`.
 
-   A simplified illustrative example:
+    A simplified illustrative example:
 
-   ```Lua
-local walkers = { down = { }, up = { } }
+    ```Lua
+    local walkers = { down = { }, up = { } }
 
-setmetatable(
-    walkers.down,
-    {
-      __index = function(t, id)
-        error("unknown DSL construct `" .. tosting(id) .. "'")
-      end;
-    }
-  )
+    setmetatable(
+        walkers.down,
+        {
+          __index = function(t, id)
+            error("unknown DSL construct `" .. tosting(id) .. "'")
+          end;
+        }
+      )
 
-walkers.down["foo:bar"] = function(self, node)
-  io.stdout:write("<foo:bar name=", xml_escape(node.name), ">\n",)
-end
+    walkers.down["foo:bar"] = function(self, node)
+      io.stdout:write("<foo:bar name=", xml_escape(node.name), ">\n",)
+    end
 
-walkers.down["foo:cdata"] = function(self, node)
-  io.stdout:write("<![CDATA[", cdata_escape(node.text), "]]>\n")
-end
+    walkers.down["foo:cdata"] = function(self, node)
+      io.stdout:write("<![CDATA[", cdata_escape(node.text), "]]>\n")
+    end
 
-walkers.up["foo:bar"] = function(self, node)
-  io.stdout:write("</foo:bar>\n")
-end
+    walkers.up["foo:bar"] = function(self, node)
+      io.stdout:write("</foo:bar>\n")
+    end
 
-handle_dsl(function()
-  foo:bar "baz"
-  {
-    foo:cdata [[quo]];
-  }
-end)
+    handle_dsl(function()
+      foo:bar "baz"
+      {
+        foo:cdata [[quo]];
+      }
+    end)
 
---> Should print:
---> <foo:bar name="baz">
--->   <![CDATA[quo]]>
---> </foo:bar>
-   ```
+    --> Should print:
+    --> <foo:bar name="baz">
+    -->   <![CDATA[quo]]>
+    --> </foo:bar>
+    ```
 
 This approach to building DSLs works, but it lacks flexibility. Each new DSL
 using it would be like all others. But, as we can see from examples, not
@@ -457,7 +457,7 @@ O, here they come.
 
 **TODO: document!**
 
-## Some additional remarks on the design of the library
+## Some additional remarks on the design
 
 ### On performance
 
@@ -488,11 +488,11 @@ a port.
 
 **TODO: document!**
 
-## On Lua-Núcleo dependency
+### On Lua-Núcleo dependency
 
 **TODO: document: optional import, how to disable strict**
 
-## On pk-test dependency
+### On pk-test dependency
 
 **TODO: document!**
 
