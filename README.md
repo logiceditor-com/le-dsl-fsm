@@ -528,8 +528,7 @@ https://github.com/logiceditor-com/le-dsl-fsm/issues
 For public support, please ask a question at http://stackoverflow.com,
 and send a link to it to a project maintainer,
 Alexander Gladysh at ag@logiceditor.com. You can also use Lua mailing list,
-but please CC the maintainer explicitly and write `lua-dsl-fsm` somewhere
-in the subject.
+but please CC the maintainer and write `lua-dsl-fsm` somewhere in the subject.
 
 Private consulting is available on commercial basis. Should you need it,
 please contact LogicEditor at consulting@logiceditor.com.
