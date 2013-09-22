@@ -336,7 +336,6 @@ This older approach does work as follows:
     ```
 
     Not shown in the example:
-
     * Source location capture in `__index`. Done via `debug.getinfo()`.
     * Support for multiple DSL construct forms.
     * Dangling (or optional) data call handling. All proxies are registered
