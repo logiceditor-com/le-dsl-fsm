@@ -616,7 +616,9 @@ Several things to note here:
 but less generic and less flexible state entrance handlers.
 TODO: Probably a redesign is in order.*
 
-Now we can implement our DSL code as a set of FSM state transition handlers.
+Now we can describe our DSL as a set of FSM states with state transition
+handlers, and teach our generic DSL proxy object to adhere to transition
+rules and call the appropriate handlers when needed.
 
 Here is a simplified illustrative example of the XML output example seen above:
 
@@ -690,8 +692,8 @@ local fsm =
     {
       type = "call", id = "foo.bar.text";
 
-      handler = function(self, t, text)
-        t.xml = "<![CDATA[" .. cdata_escape(text) .. "]]>"
+      handler = function(self, t, _, text)
+        t.xml = "<![CDATA[" .. cdata_escape(text) .. "]]>\n"
       end;
     };
   };
@@ -748,7 +750,8 @@ local fsm =
       handler = function(self, t, param)
         param.id = "foo:bar"
         param.name = t.name
-        return param -- Note t being replaced by param
+        -- Tell the framework that we'd like to replace `t' with `param'
+        return param
       end;
     };
 
@@ -765,7 +768,7 @@ local fsm =
     {
       type = "call", id = "foo.bar.text";
 
-      handler = function(self, t, text)
+      handler = function(self, t, _, text)
         t.id = "foo:cdata"
         t.text = text
       end;
@@ -779,13 +782,144 @@ to implement. That being said, this is a very low level format of
 DSL description, and a lot of boilerplate code is to be expected.
 We'll tackle that later.
 
-## On auto-finalization
+## On DSL proxy finalization
+
+Our new FSM-based approach to DSL implementation has an interesting side-effect:
+now we can know when we can finalize our proxy object and replace it with actual
+data.
+
+For the FSM from the last example, whenever proxy object reaches a terminal
+state, it can be automatically finalized and replaced with its data (`t`
+argument in handlers).
+
+DSL FSM proxy object is always an empty table with a fancy metatable set to it.
+All proxy object data is stored in that metatable, not in the table. This way,
+if we remove the metatable and copy all `t` keys and values to that table,
+we'll effectively get the finalized data object right in the same place where
+proxy object was. (Of course, all references to `t` would no longer be valid,
+but it is a small price to pay.)
+
+For the last `foo:cdata` example above:
+
+```Lua
+foo:bar "baz"
+{
+  foo:cdata [[quo]];
+}
+```
+
+...Before finalization, in pseudocode:
+
+```Lua
+PROXY "bar"
+{
+  t =
+  {
+    id = "foo:bar";
+    name = "baz";
+
+    PROXY "cdata"
+    {
+      t =
+      {
+        id = "foo:cdata";
+        text = "quo";
+      };
+    };
+  };
+}
+```
+
+...After finalization:
+
+```Lua
+{
+  id = "foo:bar";
+  name = "baz";
+
+  {
+    id = "foo:cdata";
+    text = "quo";
+  };
+}
+```
+
+To simplify handler code, current implementation automatically finalizes
+all proxies that are passed as arguments to the handler (including
+table keys and values). That is why in a previous FSM example we could
+access `param[i].xml` from `foo:cdata` directly:
+
+```Lua
+handler = function(self, t, param)
+  io.write("<foo name=", xml_escape(t.name), ">\n")
+  for i = 1, #param do
+    if type(param[i]) == "table" then
+      io.write(assert(param[i].xml)) -- param is a finalized proxy
+    else
+      io.write(tostring(param[i]))
+    end
+  end
+  io.write("</foo>\n")
+end;
+```
+
+Things become a little more complicated when the terminal state is not the
+only one possible transition from a given state.
+
+A synthetic micro-example:
+
+```Lua
+cat "this" " is " "fun"
+```
+
+This micro-DSL can be described as follows:
+
+```Lua
+local fsm =
+{
+  id = "cat";
+
+  init =
+  {
+    "call";
+  };
+
+  states =
+  {
+    [false] = true; -- Use default terminal state handler
+
+    ["call"] =
+    {
+      type = "call", id = "call";
+
+      "call"; -- A self-reference
+      false; -- Terminal state
+
+      handler = function(self, t, text)
+        io.stdout:write(text)
+      end;
+    };
+  };
+}
+```
+
+Here we can't immediately know if the proxy reached its final state,
+or if a next `"call"` state would follow.
+
+This is why we still have to keep a DSL [proxy] manager object, which
+tracks all proxies, and is responsible for their late finalization.
+
+Luckily, since all proxies are tables, late finalization does not prevent them
+from being finalized in-place, the same as with auto-finalization, described
+above.
+
+**TODO: Describe why one would want to use `self:store_finalized_data()`**
+
+## Meta: on-the-fly FSM modifications
 
 **TODO: document!**
 
-## Meta: FSM modifications
-
-**TODO: document!**
+## Meta-handlers
 
 ## Common DSL environment
 
@@ -841,6 +975,10 @@ a port.
 # Reference
 
 ## DSL FSM format
+
+**TODO: document!**
+
+## Helper object API
 
 **TODO: document!**
 
