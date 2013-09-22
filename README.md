@@ -854,7 +854,7 @@ handler = function(self, t, param)
   io.write("<foo name=", xml_escape(t.name), ">\n")
   for i = 1, #param do
     if type(param[i]) == "table" then
-      io.write(assert(param[i].xml)) -- param is a finalized proxy
+      io.write(assert(param[i].xml)) -- param[i] is a finalized proxy
     else
       io.write(tostring(param[i]))
     end
