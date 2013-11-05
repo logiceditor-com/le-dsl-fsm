@@ -142,16 +142,17 @@ local dsl_fsm_bootstrap_chunk = function()
     return states
   end
 
-  local state_param_checker = function(have_value_field, prepare_states)
+  local state_param_checker = function(msg, have_value_field, prepare_states)
     return function(self, t, param)
       self:ensure_field_call(param)
-      self:ensure_is("param", param, "table")
+      -- TODO: Get rid of concatenations here
+      self:ensure_is(msg .. ".param", param, "table")
 
       check_common_state_param(self, param)
 
       if have_value_field and self:good() then
         -- TODO: Allow arbitrary key types?
-        self:ensure_is("value", param.value, "string")
+        self:ensure_is(msg .. ".value", param.value, "string")
       end
 
       if self:good() then
@@ -161,7 +162,7 @@ local dsl_fsm_bootstrap_chunk = function()
 
       -- Pity user and simplify error handing by failing early.
       local res, err = self:context().dsl_env:result()
-      error("broken meta DSL: " .. err, 2) -- TODO: Tune level
+      error(msg .. ": broken meta DSL: " .. err, 2) -- TODO: Tune level
     end
   end
 
@@ -231,6 +232,7 @@ local dsl_fsm_bootstrap_chunk = function()
         outs = outs;
         name = "_index";
         call_handler = state_param_checker(
+            "._index",
             true,
             function(self, t, param)
               if self:good() then
@@ -249,6 +251,7 @@ local dsl_fsm_bootstrap_chunk = function()
         outs = outs;
         name = "_call";
         call_handler = state_param_checker(
+            "._call",
             false,
             function(self, t, param)
               if self:good() then
@@ -268,6 +271,7 @@ local dsl_fsm_bootstrap_chunk = function()
         name = "_field_call";
         -- TODO: Generalize copy-paste with _method_call below
         call_handler = state_param_checker(
+            "._field_call",
             true,
             function(self, t, param)
               local handler = param.handler
@@ -316,6 +320,7 @@ local dsl_fsm_bootstrap_chunk = function()
         name = "_method_call";
         -- TODO: Generalize copy-paste with _method_call below
         call_handler = state_param_checker(
+            ".method_call",
             true,
             function(self, t, param)
               local handler = param.handler
