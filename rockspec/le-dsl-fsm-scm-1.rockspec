@@ -29,5 +29,6 @@ build =
     ["dsl-fsm.code.profile"] = "src/lua/dsl-fsm/code/profile.lua";
     ["dsl-fsm.common_env"] = "src/lua/dsl-fsm/common_env.lua";
     ["dsl-fsm.dsl_manager"] = "src/lua/dsl-fsm/dsl_manager.lua";
+    ["dsl-fsm.util.path_mt"] = "src/lua/dsl-fsm/util/path_mt.lua";
   };
 }

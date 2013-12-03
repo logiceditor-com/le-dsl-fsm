@@ -28,6 +28,10 @@ return
   {
     { "dsl-fsm/common_env.lua", w = 0 };
   };
+  create_path_mt =
+  {
+    { "dsl-fsm/util/path_mt.lua", w = 0 };
+  };
   do_in_common_dsl_environment =
   {
     { "dsl-fsm/common_env.lua", w = 0 };
